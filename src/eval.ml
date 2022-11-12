@@ -131,6 +131,7 @@ let isiv (e: exp) : bool =
     | App(Fun(fp, ex), arg) -> false
 
 
+
 let rec eval_expr (e: exp) (env : environment) : value =
     let pred a b = isiv a && isiv b in
     let common0 v = vtoi(eval_expr v env) in
@@ -158,29 +159,14 @@ let rec eval_expr (e: exp) (env : environment) : value =
     | Or(a,b) ->cond1 (Bool_Val ((common1 a || common1 b))) a b
     | And(a,b) -> cond1 (Bool_Val ((common1 a && common1 b))) a b
     | Fun(fp, ex) -> Closure(env, fp, ex)
-    | App(Fun(fp, ex), arg) -> eval_expr ex ((fp, eval_expr arg env)::env)
+    (*| App(Fun(fp, ex), arg) -> eval_expr ex ((fp, eval_expr arg env)::env)*)
+    | App(e, arg) -> 
+            (match  e with
+            | Fun(fp, ex) ->  eval_expr ex ((fp, eval_expr arg env)::env)
+            | a -> eval_expr a env)
             
             (*1) add (fp: arg) to env, then evaluate ex*)
 
-
-(*test functions*)
-
-let rec zip l1 l2 = 
-    match l1, l2 with
-    |[], [] -> []
-    |h::t, j::y -> (h,Int_Val(j))::zip t y
-
-let e = zip ["x";"y";"b"] [-(100);23;10];;
-let e = ("z", Bool_Val true)::e
-let e0 = Not
-    (Lt(Plus(Times(Var("a"), Number(10)), Var("x")), Number(2)));;
-
-let e1 = App(Fun("a", e0), Number 9)
-
-let e2 = Div(Number 9, Number 0
-
-
-)
 
 
 
