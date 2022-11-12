@@ -49,16 +49,24 @@ let t' = (fun (a,b) -> a)
 let t'' = (fun (a,b) -> b) 
 
 (*returns a number from environtment*)
-let rec getn (env : environment) (a : string) : int =
+let rec getn (env : environment) (a : string) : value=
     match env with 
-        | [] -> 0
-        | h::t -> if t' h = a then vtoi(t'' h) else getn t a
+        | [] -> Int_Val 0
+        | h::t -> if t' h = a then t'' h else getn t a
 
 (*returns a boolean from environment*)
-let rec getbool (env: environment) (a : string) : bool = 
+let rec getbool (env: environment) (a : string) : value = 
     match env with 
-        | [] -> false
-        | h::t -> if t' h = a then vtob(t'' h) else getbool t a
+        | [] -> Bool_Val false
+        | h::t -> if t' h = a then t'' h else getbool t a
+
+        
+        
+(*returns a closure from environment*)
+let rec getcls (env: environment) (a : string) = 
+    match env with 
+        | h::t -> if t' h = a then t'' h else getcls t a
+
 
 (*returns the variable's value*)
 let rec get_var (env : environment) (x : string) = 
@@ -69,6 +77,20 @@ let rec get_var (env : environment) (x : string) =
 let is_intv (ex : value) = 
     match ex with
     | Int_Val(a) -> true
+    | _ -> false
+
+    
+(*returns true if value is an bool_val*)
+let is_boolv (ex : value) = 
+    match ex with
+    | Bool_Val(a) -> true
+    | _ -> false
+
+
+(*returns true if value is an cls_val*)
+let is_clsv (ex : value) = 
+    match ex with
+    | Closure(_,_,_) -> true
     | _ -> false
 
 
@@ -119,8 +141,9 @@ let rec eval_expr (e: exp) (env : environment) : value =
     match e with
     | Number(n) -> Int_Val(n)
     | Var(x) -> 
-            if is_intv (get_var env x) then Int_Val(getn env x) 
-            else Bool_Val(getbool env x)
+            if is_intv (get_var env x) then getn env x 
+            else if is_boolv (get_var env x) then getbool env x
+            else getcls env x
     | True -> Bool_Val true
     | False -> Bool_Val false
     | Plus(a, b) -> cond0 (Int_Val(common0 a + common0 b)) a b
@@ -174,10 +197,17 @@ let dttovt (dt: dtype) (env : environment): value =
 let rec eval_command (c : com) (env : environment) : environment =
     match c with
     | Declare(dt, st) -> (st, dttovt dt env)::env
-    | Assg(st, e) -> prune_env ((st, eval_expr e env)::env)
+    | Assg(st, e) -> (st, eval_expr e env)::env
     | While(g, c0) -> if vtob (eval_expr g env) then eval_command (While(g, c0)) (eval_command c0 env) else env
     | Cond(g, e0, e1) -> if vtob (eval_expr g env) then eval_command e0 env else eval_command e1 env
     | Comp(c0, c1) -> eval_command c1 (eval_command c0 env)
+    | Skip -> env
+    | For(g, c0) -> (
+        let p = vtoi (eval_expr g env) in 
+        if not(p = 0) then eval_command 
+            (While(Lt(Var "n", Number p), Comp(Assg("n", Plus(Var "n", Number(1))), c0))) (("n", Int_Val 0)::env )
+        else env)
+
 
 
 
