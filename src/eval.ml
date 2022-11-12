@@ -175,8 +175,8 @@ let rec eval_command (c : com) (env : environment) : environment =
     match c with
     | Declare(dt, st) -> (st, dttovt dt env)::env
     | Assg(st, e) -> prune_env ((st, eval_expr e env)::env)
-    | While(g, c0) -> if exptobool g then eval_command c0 env else env
-    | Cond(g, e0, e1) -> if exptobool g then eval_command e0 env else eval_command e1 env
+    | While(g, c0) -> if vtob (eval_expr g env) then eval_command (While(g, c0)) (eval_command c0 env) else env
+    | Cond(g, e0, e1) -> if vtob (eval_expr g env) then eval_command e0 env else eval_command e1 env
     | Comp(c0, c1) -> eval_command c1 (eval_command c0 env)
 
 
