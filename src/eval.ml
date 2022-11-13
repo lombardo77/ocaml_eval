@@ -65,7 +65,8 @@ let rec getbool (env: environment) (a : string) : value =
         
 (*returns a closure from environment*)
 let rec getcls (env: environment) (a : string) = 
-    match env with 
+    match env with
+        | [] -> raise TypeError 
         | h::t -> if t' h = a then t'' h else getcls t a
 
 
@@ -96,13 +97,6 @@ let is_clsv (ex : value) =
     | _ -> false
 
 
-(*converts expression to a value*)
-let exptov (e: exp) (env: environment): value = 
-    match e with
-    | Number(i) -> Int_Val(i)
-    | True -> Bool_Val(true)
-    | False -> Bool_Val(false)
-    | Fun(a, b) -> Closure(env, a, b)
  
 
 
@@ -132,7 +126,7 @@ let isiv (e: exp) : bool =
     | Or(a,b) -> false 
     | And(a,b) -> false 
     | Fun(fp, ex) -> false
-    | App(Fun(fp, ex), arg) -> false
+    | App(_, arg) -> false
 
 let ctof cl = 
     match cl with
@@ -173,7 +167,7 @@ let rec eval_expr (e: exp) (env : environment) : value =
     | Fun(fp, ex) -> Closure(env, fp, ex)
     (*| App(Fun(fp, ex), arg) -> eval_expr ex ((fp, eval_expr arg env)::env)*)
     | App(e, arg) -> 
-            (let cls a = eval_expr a (("s", exptov arg env)::env) in
+            (let cls a = eval_expr a (("s", eval_expr arg env)::env) in
             match  e with
             | Fun(fp, ex) ->  eval_expr ex ((fp, eval_expr arg env)::env)
             | a -> eval_expr(App(ctof(cls a), arg)) (get_env (cls a))
