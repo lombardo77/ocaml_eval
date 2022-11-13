@@ -197,11 +197,7 @@ let rec eval_expr (e: exp) (env : environment) : value =
             let cl = eval_expr e0 env in
                 (match e0 with
                 | Fun(fp, ex) -> fev ex fp
-                | _ ->  
-                    let get_env cl = match cl with 
-                        | Closure(env,_ ,_) -> env
-                        | _ -> raise Env in
-                    eval_expr (App((ctof cl), vtoe arg)) (get_env cl)))
+                | _ -> eval_expr (App((ctof cl), vtoe arg)) (get_env cl)))
                 
 
 (* evaluate a command in an environment *)
