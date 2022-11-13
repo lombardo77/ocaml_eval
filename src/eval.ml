@@ -40,13 +40,13 @@ let print_env_str (env : environment): string =
 (* evaluate an arithmetic expression in an environment *)
 let vtoi (iv : value) : int = 
     match iv with 
-        | Int_Val(n) -> n
-        | _ -> raise TypeError
+    | Int_Val(n) -> n
+    | _ -> raise TypeError
 
 let vtob (iv : value) : bool = 
     match iv with 
-        | Bool_Val(s) -> s
-        | _ -> raise TypeError
+    | Bool_Val(s) -> s
+    | _ -> raise TypeError
 
 
 let vtoe (v : value) = match v with
@@ -69,22 +69,22 @@ let t'' = (fun (a,b) -> b)
 (*returns a number from environtment*)
 let rec getn (env : environment) (a : string) : value=
     match env with 
-        | [] -> Int_Val 0
-        | h::t -> if t' h = a then t'' h else getn t a
+    | [] -> Int_Val 0
+    | h::t -> if t' h = a then t'' h else getn t a
 
 (*returns a boolean from environment*)
 let rec getbool (env: environment) (a : string) : value = 
     match env with 
-        | [] -> Bool_Val false
-        | h::t -> if t' h = a then t'' h else getbool t a
+    | [] -> Bool_Val false
+    | h::t -> if t' h = a then t'' h else getbool t a
 
         
         
 (*returns a closure from environment*)
 let rec getcls (env: environment) (a : string) = 
     match env with
-        | [] -> raise TypeError 
-        | h::t -> if t' h = a then t'' h else getcls t a
+    | [] -> raise TypeError 
+    | h::t -> if t' h = a then t'' h else getcls t a
 
 
 (*returns the variable's value*)
@@ -193,7 +193,8 @@ let rec eval_expr (e: exp) (env : environment) : value =
     | Fun(fp, ex) -> Closure(env, fp, ex)
     | App(e0, e1) -> 
             (let arg = (eval_expr e1 env) in
-            let fev ex fp = eval_expr ex ((fp, eval_expr (vtoe arg) env)::env) in
+            let env' fp = ((fp, eval_expr (vtoe arg) env)::env) in 
+            let fev ex fp = eval_expr ex (env' fp) in
             let cl = eval_expr e0 env in
                 (match e0 with
                 | Fun(fp, ex) -> fev ex fp
@@ -230,20 +231,27 @@ let rec isd env st v=
 
 
 let rec eval_command (c : com) (env : environment) : environment =
+    let cond g = vtob (eval_expr g env) in
     match c with
     | Declare(dt, st) -> (st, dttovt dt env)::env
     | Assg(st, e) -> 
             (let a' = eval_expr e env in
-            if (isd env st a') then (st, a')::env else raise UndefinedVar
-            )
-    | While(g, c0) -> if vtob (eval_expr g env) then eval_command (While(g, c0)) (eval_command c0 env) else env
-    | Cond(g, e0, e1) -> if vtob (eval_expr g env) then eval_command e0 env else eval_command e1 env
+            if (isd env st a') then (st, a')::env else raise UndefinedVar)
+    | While(g, c0) -> if cond g 
+            then eval_command (While(g, c0)) (eval_command c0 env) 
+            else env
+    | Cond(g, e0, e1) -> if cond g 
+            then eval_command e0 env 
+            else eval_command e1 env
     | Comp(c0, c1) -> eval_command c1 (eval_command c0 env)
     | Skip -> env
     | For(g, c0) -> (
-        let p = vtoi (eval_expr g env) in 
-        if not(p = 0) then eval_command 
-            (While(Lt(Var "n", Number p), Comp(Assg("n", Plus(Var "n", Number(1))), c0))) (("n", Int_Val 0)::env )
+        let p = vtoi (eval_expr g env) in
+        let e0 = Lt(Var "n", Number p) in
+        let e1 = Comp((Assg("n", Plus(Var "n", Number(1))), c0)) in
+        let a0 = While(e0, e1) in
+        let a1 = (("n", Int_Val 0)::env ) in
+        if not(p = 0) then eval_command a0 a1 
         else env)
 
 
