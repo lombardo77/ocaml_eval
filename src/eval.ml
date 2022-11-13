@@ -41,6 +41,17 @@ let vtob (iv : value) : bool =
     match iv with 
         | Bool_Val(s) -> s
         | _ -> raise TypeError
+
+
+let vtoe (v : value) = match v with
+    | Int_Val a -> Number a
+    | Bool_Val true -> True
+    | Bool_Val false -> False
+    | Closure(en,f,ex) -> Fun(f, ex)
+    
+
+
+
 (*
 * tuple helper functions
 * t' gets first item
@@ -138,6 +149,11 @@ let get_env cl =
     | Closure(a,b,c) -> a
     | _ -> raise TypeError
 
+
+exception Fp
+exception Exp
+exception Env
+
 let rec eval_expr (e: exp) (env : environment) : value =
     let pred a b = isiv a && isiv b in
     let common0 v = vtoi(eval_expr v env) in
@@ -166,17 +182,24 @@ let rec eval_expr (e: exp) (env : environment) : value =
     | And(a,b) -> cond1 (Bool_Val ((common1 a && common1 b))) a b
     | Fun(fp, ex) -> Closure(env, fp, ex)
     (*| App(Fun(fp, ex), arg) -> eval_expr ex ((fp, eval_expr arg env)::env)*)
-    | App(e, arg) -> 
-            (let cls a = eval_expr a (("s", eval_expr arg env)::env) in
-            match  e with
+    (*| App(e, arg) -> 
+            (let cls a = eval_expr a (("tmp", eval_expr arg env)::env) in
+            match e with
             | Fun(fp, ex) ->  eval_expr ex ((fp, eval_expr arg env)::env)
-            | a -> eval_expr(App(ctof(cls a), arg)) (get_env (cls a))
-            )
-            
+            | a -> eval_expr(App(ctof(cls a), arg)) (get_env (cls a)))*)
+    | App(e0, e1) -> 
+            (let arg = (eval_expr e1 env) in
+            let cl = eval_expr e0 env in
+                (match e0 with
+                | Fun(fp, ex) ->  eval_expr ex ((fp, eval_expr (vtoe arg) env)::env)
+                | _ ->  
+                    let get_env cl = match cl with 
+                        | Closure(env,_ ,_) -> env
+                        | _ -> raise Env in
+                    eval_expr (App((ctof cl), vtoe arg)) (get_env cl)))
+                
+
             (*1) add (fp: arg) to env, then evaluate ex*)
-
-
-
 
 (* evaluate a command in an environment *)
 
