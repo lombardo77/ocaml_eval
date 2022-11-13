@@ -35,11 +35,12 @@ let print_env_str (env : environment): string =
 let vtoi (iv : value) : int = 
     match iv with 
         | Int_Val(n) -> n
-        | _ -> 0
+        | _ -> raise TypeError
 
 let vtob (iv : value) : bool = 
     match iv with 
         | Bool_Val(s) -> s
+        | _ -> raise TypeError
 (*
 * tuple helper functions
 * t' gets first item
@@ -71,7 +72,7 @@ let rec getcls (env: environment) (a : string) =
 (*returns the variable's value*)
 let rec get_var (env : environment) (x : string) = 
     match env with
-    | [] -> raise TypeError
+    | [] -> raise UndefinedVar
     | h::t -> if t' h = x then t'' h else get_var t x
 
 (*returns true if value is an int_val*)
@@ -160,7 +161,7 @@ let rec eval_expr (e: exp) (env : environment) : value =
     | Times(a, b) -> cond0 (Int_Val(common0 a * common0 b)) a b
     | Minus(a, b) -> cond0 (Int_Val(common0 a - common0 b)) a b
     | Mod(a, b) -> cond0 (Int_Val(common0 a mod common0 b)) a b
-    | Div(a, b) -> cond0 (Int_Val(common0 a / common0 b)) a b
+    | Div(a, b) -> if common0 b = 0 then raise DivByZeroError else cond0 (Int_Val(common0 a / common0 b)) a b
     | Eq(a, b) -> cond0 (Bool_Val(common0 a = common0 b)) a b 
     | Leq(a, b) -> cond0 (Bool_Val(common0 a <= common0 b)) a b
     | Lt(a, b) -> cond0 (Bool_Val(common0 a < common0 b)) a b
@@ -190,11 +191,26 @@ let dttovt (dt: dtype) (env : environment): value =
     |Bool_Type -> Bool_Val false
     |Lambda_Type -> Closure(env, "x", Var "x")
 
+(*checks to see if var is declared*)
+let rec isd env st v= 
+    match env with
+    | [] -> false
+    | (a,b)::t -> if st = a then 
+        (match v, b with
+        | Int_Val _, Int_Val _ -> true
+        | Bool_Val _, Bool_Val _ -> true
+        | Closure(_,_,_), Closure(_,_,_) -> true
+        | _ -> raise TypeError
+    ) 
+    else isd t st v
 
 let rec eval_command (c : com) (env : environment) : environment =
     match c with
     | Declare(dt, st) -> (st, dttovt dt env)::env
-    | Assg(st, e) -> (st, eval_expr e env)::env
+    | Assg(st, e) -> 
+            (let a' = eval_expr e env in
+            if (isd env st a') then (st, a')::env else raise UndefinedVar
+            )
     | While(g, c0) -> if vtob (eval_expr g env) then eval_command (While(g, c0)) (eval_command c0 env) else env
     | Cond(g, e0, e1) -> if vtob (eval_expr g env) then eval_command e0 env else eval_command e1 env
     | Comp(c0, c1) -> eval_command c1 (eval_command c0 env)
