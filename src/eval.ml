@@ -71,6 +71,7 @@ let rec getcls (env: environment) (a : string) =
 (*returns the variable's value*)
 let rec get_var (env : environment) (x : string) = 
     match env with
+    | [] -> raise TypeError
     | h::t -> if t' h = x then t'' h else get_var t x
 
 (*returns true if value is an int_val*)
@@ -130,7 +131,15 @@ let isiv (e: exp) : bool =
     | Fun(fp, ex) -> false
     | App(Fun(fp, ex), arg) -> false
 
+let ctof cl = 
+    match cl with
+    | Closure(a,b,c) -> Fun(b, c)
+    | _ -> raise TypeError
 
+let get_env cl = 
+    match cl with
+    | Closure(a,b,c) -> a
+    | _ -> raise TypeError
 
 let rec eval_expr (e: exp) (env : environment) : value =
     let pred a b = isiv a && isiv b in
@@ -161,9 +170,11 @@ let rec eval_expr (e: exp) (env : environment) : value =
     | Fun(fp, ex) -> Closure(env, fp, ex)
     (*| App(Fun(fp, ex), arg) -> eval_expr ex ((fp, eval_expr arg env)::env)*)
     | App(e, arg) -> 
-            (match  e with
+            (let cls a = eval_expr a (("s", exptov arg)::env) in
+            match  e with
             | Fun(fp, ex) ->  eval_expr ex ((fp, eval_expr arg env)::env)
-            | a -> eval_expr a env)
+            | a -> eval_expr(App(ctof(cls a), arg)) (get_env (cls a))
+            )
             
             (*1) add (fp: arg) to env, then evaluate ex*)
 
