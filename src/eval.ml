@@ -97,11 +97,13 @@ let is_clsv (ex : value) =
 
 
 (*converts expression to a value*)
-let exptov (e: exp) : value = 
+let exptov (e: exp) (env: environment): value = 
     match e with
     | Number(i) -> Int_Val(i)
     | True -> Bool_Val(true)
     | False -> Bool_Val(false)
+    | Fun(a, b) -> Closure(env, a, b)
+ 
 
 
 (*converts expression to a value*)
@@ -171,7 +173,7 @@ let rec eval_expr (e: exp) (env : environment) : value =
     | Fun(fp, ex) -> Closure(env, fp, ex)
     (*| App(Fun(fp, ex), arg) -> eval_expr ex ((fp, eval_expr arg env)::env)*)
     | App(e, arg) -> 
-            (let cls a = eval_expr a (("s", exptov arg)::env) in
+            (let cls a = eval_expr a (("s", exptov arg env)::env) in
             match  e with
             | Fun(fp, ex) ->  eval_expr ex ((fp, eval_expr arg env)::env)
             | a -> eval_expr(App(ctof(cls a), arg)) (get_env (cls a))
