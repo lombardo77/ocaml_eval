@@ -31,6 +31,12 @@ let print_env_str (env : environment): string =
 (****** Your Code ******)
 (***********************)
 
+
+
+(******************************)
+(********Helper Functions******)
+(******************************)
+
 (* evaluate an arithmetic expression in an environment *)
 let vtoi (iv : value) : int = 
     match iv with 
@@ -150,9 +156,11 @@ let get_env cl =
     | _ -> raise TypeError
 
 
-exception Fp
-exception Exp
 exception Env
+
+(******************************)
+(**********eval_expr***********)
+(******************************)
 
 let rec eval_expr (e: exp) (env : environment) : value =
     let pred a b = isiv a && isiv b in
@@ -173,7 +181,9 @@ let rec eval_expr (e: exp) (env : environment) : value =
     | Times(a, b) -> cond0 (Int_Val(common0 a * common0 b)) a b
     | Minus(a, b) -> cond0 (Int_Val(common0 a - common0 b)) a b
     | Mod(a, b) -> cond0 (Int_Val(common0 a mod common0 b)) a b
-    | Div(a, b) -> if common0 b = 0 then raise DivByZeroError else cond0 (Int_Val(common0 a / common0 b)) a b
+    | Div(a, b) -> 
+            if common0 b = 0 then raise DivByZeroError 
+            else cond0 (Int_Val(common0 a / common0 b)) a b
     | Eq(a, b) -> cond0 (Bool_Val(common0 a = common0 b)) a b 
     | Leq(a, b) -> cond0 (Bool_Val(common0 a <= common0 b)) a b
     | Lt(a, b) -> cond0 (Bool_Val(common0 a < common0 b)) a b
@@ -181,25 +191,18 @@ let rec eval_expr (e: exp) (env : environment) : value =
     | Or(a,b) ->cond1 (Bool_Val ((common1 a || common1 b))) a b
     | And(a,b) -> cond1 (Bool_Val ((common1 a && common1 b))) a b
     | Fun(fp, ex) -> Closure(env, fp, ex)
-    (*| App(Fun(fp, ex), arg) -> eval_expr ex ((fp, eval_expr arg env)::env)*)
-    (*| App(e, arg) -> 
-            (let cls a = eval_expr a (("tmp", eval_expr arg env)::env) in
-            match e with
-            | Fun(fp, ex) ->  eval_expr ex ((fp, eval_expr arg env)::env)
-            | a -> eval_expr(App(ctof(cls a), arg)) (get_env (cls a)))*)
     | App(e0, e1) -> 
             (let arg = (eval_expr e1 env) in
+            let fev ex fp = eval_expr ex ((fp, eval_expr (vtoe arg) env)::env) in
             let cl = eval_expr e0 env in
                 (match e0 with
-                | Fun(fp, ex) ->  eval_expr ex ((fp, eval_expr (vtoe arg) env)::env)
+                | Fun(fp, ex) -> fev ex fp
                 | _ ->  
                     let get_env cl = match cl with 
                         | Closure(env,_ ,_) -> env
                         | _ -> raise Env in
                     eval_expr (App((ctof cl), vtoe arg)) (get_env cl)))
                 
-
-            (*1) add (fp: arg) to env, then evaluate ex*)
 
 (* evaluate a command in an environment *)
 
@@ -223,6 +226,13 @@ let rec isd env st v=
     ) 
     else isd t st v
 
+    
+    
+(******************************)
+(*********eval_command*********)
+(******************************)
+
+
 let rec eval_command (c : com) (env : environment) : environment =
     match c with
     | Declare(dt, st) -> (st, dttovt dt env)::env
@@ -239,21 +249,6 @@ let rec eval_command (c : com) (env : environment) : environment =
         if not(p = 0) then eval_command 
             (While(Lt(Var "n", Number p), Comp(Assg("n", Plus(Var "n", Number(1))), c0))) (("n", Int_Val 0)::env )
         else env)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
